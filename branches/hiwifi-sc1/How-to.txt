@@ -1,0 +1,82 @@
+编译方法
+
+1. 下载源代码：
+   svn co https://code.hiwifi.com/svn/hiwifi/branches/hiwifi-sc1 hiwifi
+   cd hiwifi
+
+2. 导入feeds：
+   ./scripts/feeds update
+   ./scripts/feeds install -a
+
+3. 添加hcwifi驱动（用户不必做，直接以二进制形式由HiWiFi官方提供）：
+   ln -sf ../../hc6361/platform/package/hcwifi package/
+   ln -sf ../../hc6361/platform/package/bdinfo package/
+   ln -sf ../../hc6361/platform/package/network/utils/iw-hcwifi package/
+
+4. 更新配置文件：
+   cp configs/HC6361_hcwifi_defconfig .config
+
+  执行“make menuconfig”，不用更改任何配置，直接保存退出。
+
+5. 编译：
+   make V=s
+  最终的固件文件为
+   bin/ar71xx/openwrt-ar71xx-generic-tw150v1-squashfs-sysupgrade.bin
+
+_______________________________________________________
+
+刷机方法
+
+* 在电脑上准备 tftp 环境，并启动 tftpd
+* 将编出的 ROM（openwrt-ar71xx-generic-tw150v1-squashfs-sysupgrade.bin） 改名为 recovery.bin，放入 tftp 目录
+* 用网线将极路由 LAN 口与电脑网口相连
+* 将电脑网络接口 IP 设置为 192.168.1.88/255.255.255.0
+* 用尖锐物按住极路由 RESET 不放，给极路由加电
+* 等待电脑上 tftpd 出现传输 recovery.bin 进度条完成后，松开 RESET
+* 极路由面板灯进入跑马灯状态，跑完后，系统自动重启，刷机完成
+
+_______________________________________________________
+
+hcwifi相关软件包的安装方法：
+
+H=192.168.5.52
+opkg install http://$H/ar71xx-sc1/packages/libbdinfo_1-1_all.ipk
+opkg install http://$H/ar71xx-sc1/packages/bdinfo_1-1_all.ipk
+opkg install http://$H/ar71xx-sc1/packages/kmod-hcwifi_3.3.8+1.2.5-21_ar71xx.ipk
+opkg install http://$H/ar71xx-sc1/packages/libhcwifi_1.1-9_ar71xx.ipk
+opkg install http://$H/ar71xx-sc1/packages/iw-hcwifi_1.1-9_ar71xx.ipk
+opkg install http://$H/ar71xx-sc1/packages/libiwinfo-lua_44_ar71xx.ipk
+
+_______________________________________________________
+Wi-Fi配置方法
+
+现有Web配置界面对无线支持不全，请暂时进入命令行进行修改。基本配置语法请参考OpenWrt官方相关文档。
+
+1. 启用穿墙模式：
+   uci set wireless.radio0.txpwr=140
+   uci commit
+   wifi
+
+2. 穿墙模式下 uci wireless 配置参考：
+
+    config wifi-device 'radio0'
+        option type 'hcwifi'
+        option reg '2'
+        option channel '0'
+        option hwmode '11n'
+        option txpwr '140'
+
+    config wifi-iface
+        option device 'radio0'
+        option ifname 'wlan0'
+        option network 'lan'
+        option mode 'ap'
+        option ssid 'HiWiFi_KK'
+        option encryption 'mixed-psk'
+        option key '12345678'
+
+3. AP扫描方法：
+    iw ctl scan
+    sleep 3   # 注意, scan 和 get aplist 之间必须间隔至少3秒
+    iw get aplist
+
